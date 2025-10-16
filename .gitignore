@@ -36,8 +36,11 @@ logs/
 *.log
 server.log
 
-# Download results
+# Download results and metadata
 download_results_*.json
+conversations_metadata.json
+conversations_metadata.csv
+storage_report_*.json
 
 # Environment variables
 .env

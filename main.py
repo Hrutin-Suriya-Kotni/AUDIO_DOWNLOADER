@@ -4,15 +4,18 @@ Purpose: Download and store audio files for training diarization models
 """
 
 import os
+from datetime import datetime
 from typing import Optional
 from fastapi import FastAPI, Form, HTTPException
 from fastapi.responses import JSONResponse
 
 from audio_downloader import AudioHelper
 from logger import get_logger
+from metadata_tracker import MetadataTracker
 
-# Initialize logger
+# Initialize logger and metadata tracker
 LOGGER = get_logger("AudioDownloader")
+metadata_tracker = MetadataTracker()
 
 # Configuration
 AUDIO_STORAGE_DIR = os.getenv("AUDIO_STORAGE_DIR", "./downloaded_audios")
@@ -88,6 +91,9 @@ async def download_single_audio(
         file_size_mb = os.path.getsize(filepath) / (1024 * 1024)
         
         LOGGER.info(f"Successfully saved audio file: {filepath} ({file_size_mb:.2f} MB)")
+        
+        # Note: Single file downloads don't get tracked in metadata
+        # Only dual downloads (agent + customer) are tracked
         
         return JSONResponse(
             status_code=200,
@@ -191,6 +197,32 @@ async def download_dual_audio(
         results["status"] = "success"
         results["total_files"] = len([d for d in results["downloads"] if d["status"] == "success"])
         
+        # Track metadata in real-time if both files downloaded successfully
+        if results["total_files"] == 2:
+            try:
+                agent_file = None
+                customer_file = None
+                
+                for download in results["downloads"]:
+                    if download["speaker"] == "agent" and download["status"] == "success":
+                        agent_file = download["filepath"]
+                    elif download["speaker"] == "customer" and download["status"] == "success":
+                        customer_file = download["filepath"]
+                
+                if agent_file and customer_file:
+                    metadata_entry = metadata_tracker.add_conversation(
+                        conversation_id=conversation_id,
+                        agent_filepath=agent_file,
+                        customer_filepath=customer_file,
+                        agent_url=audio_url_agent,
+                        customer_url=audio_url_customer or ""
+                    )
+                    results["metadata_tracked"] = True
+                    LOGGER.info(f"Metadata tracked for conversation {conversation_id}")
+            except Exception as meta_err:
+                LOGGER.error(f"Failed to track metadata: {meta_err}")
+                results["metadata_tracked"] = False
+        
         return JSONResponse(status_code=200, content=results)
     
     except Exception as e:
@@ -216,6 +248,49 @@ def storage_info():
         }
     except Exception as e:
         LOGGER.error(f"Error getting storage info: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/statistics")
+def get_statistics(target_hours: Optional[float] = None):
+    """
+    Get comprehensive statistics about downloaded conversations
+    
+    Args:
+        target_hours: Optional target hours to track progress against
+    
+    Returns:
+        Statistics including total hours, conversations, storage, and progress
+    """
+    try:
+        stats = metadata_tracker.get_statistics()
+        
+        response = {
+            "summary": stats,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # Add progress tracking if target is provided
+        if target_hours:
+            progress_percentage = (stats['total_hours'] / target_hours) * 100 if target_hours > 0 else 0
+            remaining_hours = target_hours - stats['total_hours']
+            
+            # Estimate conversations needed
+            avg_duration_hours = stats['total_hours'] / stats['total_conversations'] if stats['total_conversations'] > 0 else 0
+            estimated_conversations_needed = int(remaining_hours / avg_duration_hours) if avg_duration_hours > 0 else 0
+            
+            response['progress'] = {
+                "target_hours": target_hours,
+                "current_hours": stats['total_hours'],
+                "remaining_hours": round(remaining_hours, 2),
+                "progress_percentage": round(progress_percentage, 2),
+                "estimated_conversations_needed": estimated_conversations_needed,
+                "target_reached": stats['total_hours'] >= target_hours
+            }
+        
+        return response
+    except Exception as e:
+        LOGGER.error(f"Error getting statistics: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

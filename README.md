@@ -8,20 +8,31 @@ This service is designed to:
 - Download audio files from URLs
 - Convert them to standardized WAV format (16kHz, mono)
 - Store them locally with proper naming conventions
+- **Track metadata in real-time** (duration, size, timestamps)
+- **Monitor collection progress** toward target hours
 - Log all operations for tracking and debugging
+
+Perfect for collecting training data for diarization models!
 
 ## 📁 Project Structure
 
 ```
 DOWNLOAD_DIA_AUDIOS/
-├── main.py                 # FastAPI application with endpoints
-├── audio_downloader.py     # Audio download and conversion logic
-├── logger.py              # Logging configuration
-├── requirements.txt       # Python dependencies
-├── .env.example          # Environment variables template
-├── README.md             # This file
-├── logs/                 # Log files directory (auto-created)
-└── downloaded_audios/    # Downloaded audio files (auto-created)
+├── main.py                      # FastAPI application with endpoints
+├── audio_downloader.py          # Audio download and conversion logic
+├── logger.py                    # Logging configuration
+├── metadata_tracker.py          # Real-time metadata tracking
+├── analyze_storage.py           # Storage analysis and progress monitoring
+├── batch_download_from_csv.py   # Batch download script
+├── test_single_download.py      # Single download test
+├── hourly_monitor.sh            # Hourly monitoring script (cron)
+├── requirements.txt             # Python dependencies
+├── README.md                    # This file
+├── USAGE_GUIDE.md              # CSV batch download guide
+├── TRACKING_GUIDE.md           # Detailed tracking & monitoring guide
+├── logs/                        # Log files directory (auto-created)
+├── downloaded_audios/           # Downloaded audio files (auto-created)
+└── conversations_metadata.json  # Live metadata tracking (auto-created)
 ```
 
 ## 🚀 Quick Start
@@ -66,7 +77,76 @@ python test_single_download.py
 python batch_download_from_csv.py
 ```
 
-See `USAGE_GUIDE.md` for detailed instructions.
+See `USAGE_GUIDE.md` for detailed CSV batch download instructions.
+
+## 📊 Track Your Progress
+
+### Real-Time Metadata Tracking
+
+Every conversation download is **automatically tracked** with:
+- ✅ Conversation ID and timestamp
+- ✅ Audio duration (seconds, minutes, hours)
+- ✅ File sizes (MB/GB)
+- ✅ File paths and URLs
+
+**View current statistics:**
+```bash
+# API endpoint
+curl http://localhost:8001/statistics
+
+# Command line
+python3 metadata_tracker.py
+```
+
+### Progress Monitoring
+
+Track progress toward your collection goal (e.g., 100 hours):
+
+```bash
+# Check progress
+python3 analyze_storage.py --target 100
+
+# Save report
+python3 analyze_storage.py --target 100 --save
+
+# Export to CSV
+python3 analyze_storage.py --export-csv
+```
+
+**Output:**
+```
+📊 SUMMARY:
+  Total Conversations Downloaded: 13
+  Total Audio Duration:           10.25 hours (615.0 minutes)
+  Total Storage Used:             0.44 GB (453.23 MB)
+
+🎯 PROGRESS TO TARGET:
+  Target Hours:                   100.00 hours
+  Current Hours:                  10.25 hours
+  Remaining Hours:                89.75 hours
+  Progress:                       10.3%
+  [████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 10.3%
+  
+  📥 Estimated conversations needed: 114
+```
+
+### Hourly Automated Monitoring
+
+Set up automatic hourly checks:
+
+```bash
+# Make executable
+chmod +x hourly_monitor.sh
+
+# Edit target hours
+nano hourly_monitor.sh  # Set TARGET_HOURS=100
+
+# Add to crontab
+crontab -e
+# Add: 0 * * * * /path/to/DOWNLOAD_DIA_AUDIOS/hourly_monitor.sh
+```
+
+**See `TRACKING_GUIDE.md` for complete documentation!**
 
 ## 📡 API Endpoints
 
@@ -171,6 +251,38 @@ Get information about stored audio files.
 }
 ```
 
+### 6. Statistics & Progress Tracking
+```
+GET /statistics?target_hours=100
+```
+Get comprehensive statistics about downloaded conversations with progress tracking.
+
+**Response:**
+```json
+{
+  "summary": {
+    "total_conversations": 13,
+    "total_hours": 10.25,
+    "total_minutes": 615.0,
+    "total_size_mb": 453.23,
+    "total_size_gb": 0.44,
+    "average_duration_minutes": 47.31,
+    "average_size_mb": 34.86,
+    "first_download": "2025-10-16T17:41:00",
+    "last_download": "2025-10-16T17:55:30"
+  },
+  "progress": {
+    "target_hours": 100.0,
+    "current_hours": 10.25,
+    "remaining_hours": 89.75,
+    "progress_percentage": 10.3,
+    "estimated_conversations_needed": 114,
+    "target_reached": false
+  },
+  "timestamp": "2025-10-16T18:45:23"
+}
+```
+
 ## 📊 Interactive API Documentation
 
 FastAPI provides automatic interactive documentation:
@@ -256,10 +368,53 @@ uvicorn main:app --host 0.0.0.0 --port 8001 --workers 4
 
 ## 📈 Use Cases
 
-1. **Collecting Training Data**: Download audio files for training diarization models
-2. **Data Pipeline**: Part of an automated data collection pipeline
-3. **Audio Preprocessing**: Standardize audio format before model training
-4. **Backup & Archive**: Store audio files with consistent naming conventions
+1. **Collecting Training Data**: Download audio files for training diarization models with progress tracking
+2. **Goal-Based Collection**: Set a target (e.g., 100 hours) and monitor progress
+3. **Data Pipeline**: Part of an automated data collection pipeline
+4. **Audio Preprocessing**: Standardize audio format before model training
+5. **Backup & Archive**: Store audio files with consistent naming and metadata
+
+## 🎯 Typical Workflow
+
+1. **Set Your Goal**: Decide how many hours of audio you need (e.g., 100 hours)
+2. **Start Downloading**: Run batch download script
+3. **Track Progress**: Monitor in real-time via API or command line
+4. **Hourly Checks**: Set up automated hourly monitoring
+5. **Stop When Ready**: System tells you when target is reached
+6. **Export Data**: Export metadata to CSV for analysis
+
+**Example:**
+```bash
+# Start server
+python3 main.py &
+
+# Download all conversations
+python3 batch_download_from_csv.py
+
+# Check progress anytime
+python3 analyze_storage.py --target 100
+
+# When target reached, stop the service
+```
+
+## 📝 Metadata & Reports
+
+### Files Generated
+
+| File | Purpose | Auto-Created |
+|------|---------|--------------|
+| `conversations_metadata.json` | Live metadata for all downloads | ✅ Yes |
+| `conversations_metadata.csv` | Metadata in CSV format | Via `--export-csv` |
+| `storage_report_*.json` | Timestamped analysis reports | Via `--save` |
+| `hourly_log.txt` | Hourly monitoring logs | Via cron |
+
+### Metadata Fields
+
+Each conversation entry includes:
+- Conversation ID & timestamp
+- Agent audio: filepath, URL, size, duration
+- Customer audio: filepath, URL, size, duration
+- Total: combined size, duration (seconds, minutes, hours)
 
 ## ⚠️ Error Handling
 
@@ -278,11 +433,45 @@ This service can be integrated with:
 - Audio preprocessing systems
 - Voice analytics platforms
 
+## 📚 Documentation
+
+- **README.md** (this file) - Overview and quick start
+- **USAGE_GUIDE.md** - CSV batch download instructions
+- **TRACKING_GUIDE.md** - Complete tracking & monitoring guide
+
 ## 📞 Support
 
 For issues or questions, check the logs at `./logs/audio_downloader.log` for detailed error messages.
 
+## 🚀 Quick Commands Reference
+
+```bash
+# Start server
+python3 main.py
+
+# Test single download
+python3 test_single_download.py
+
+# Batch download from CSV
+python3 batch_download_from_csv.py
+
+# Check statistics
+python3 metadata_tracker.py
+
+# Analyze progress (100 hours target)
+python3 analyze_storage.py --target 100
+
+# Export metadata to CSV
+python3 analyze_storage.py --export-csv
+
+# API statistics
+curl http://localhost:8001/statistics?target_hours=100
+
+# API docs
+open http://localhost:8001/docs
+```
+
 ---
 
-**Note**: This is a simplified version of the full Voice2Chat service, focused only on audio downloading and storage for training purposes.
+**Note**: This is a specialized audio downloader for collecting training data for diarization models, with comprehensive tracking and monitoring capabilities.
 
