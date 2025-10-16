@@ -7,7 +7,7 @@ import csv
 import requests
 import json
 
-BASE_URL = "http://localhost:8001"
+BASE_URL = "http://localhost:8888"
 CSV_FILE = "paired_conversation_urls.csv"
 
 def test_single():

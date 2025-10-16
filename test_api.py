@@ -6,7 +6,7 @@ Run this after starting the main.py server
 import requests
 import json
 
-BASE_URL = "http://localhost:8001"
+BASE_URL = "http://localhost:8888"
 
 
 def test_health():

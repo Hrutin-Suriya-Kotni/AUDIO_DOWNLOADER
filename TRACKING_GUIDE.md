@@ -72,10 +72,10 @@ python3 analyze_storage.py --export-csv
 **Option B: API Endpoint**
 ```bash
 # Get statistics
-curl http://localhost:8001/statistics
+curl http://localhost:8888/statistics
 
 # Get statistics with target
-curl "http://localhost:8001/statistics?target_hours=100"
+curl "http://localhost:8888/statistics?target_hours=100"
 ```
 
 **Option C: Python Script**
@@ -328,7 +328,7 @@ python3 analyze_storage.py --target 100
 python3 analyze_storage.py --export-csv
 
 # API statistics
-curl http://localhost:8001/statistics?target_hours=100
+curl http://localhost:8888/statistics?target_hours=100
 
 # Setup hourly monitoring
 chmod +x hourly_monitor.sh

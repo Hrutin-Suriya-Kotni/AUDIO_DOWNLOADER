@@ -11,7 +11,7 @@ from pathlib import Path
 from datetime import datetime
 
 # Configuration
-BASE_URL = "http://localhost:8001"
+BASE_URL = "http://localhost:8888"
 CSV_FILE = "paired_conversation_urls.csv"
 RESULTS_FILE = f"download_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 DELAY_BETWEEN_REQUESTS = 1  # seconds

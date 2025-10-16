@@ -184,24 +184,24 @@ You can also test manually with curl:
 
 ```bash
 # Download single file
-curl -X POST "http://localhost:8001/download/single" \
+curl -X POST "http://localhost:8888/download/single" \
   -F "conversation_id=test_conv_01" \
   -F "audio_url=https://drive.google.com/uc?export=download&id=1HCEzRL04kUarScOpkk4rnzR3TYFeVprG" \
   -F "speaker_label=customer"
 
 # Download dual files
-curl -X POST "http://localhost:8001/download/dual" \
+curl -X POST "http://localhost:8888/download/dual" \
   -F "conversation_id=test_conv_01" \
   -F "audio_url_agent=https://drive.google.com/uc?export=download&id=1cHuqbFn_AJlWyx8YlB2uvIKgm-U2JxOt" \
   -F "audio_url_customer=https://drive.google.com/uc?export=download&id=1HCEzRL04kUarScOpkk4rnzR3TYFeVprG"
 
 # Check storage
-curl http://localhost:8001/storage/info
+curl http://localhost:8888/storage/info
 ```
 
 ## 📊 Interactive API Docs
 
-Visit `http://localhost:8001/docs` for interactive Swagger UI where you can:
+Visit `http://localhost:8888/docs` for interactive Swagger UI where you can:
 - Test all endpoints
 - See request/response schemas
 - Try different parameters

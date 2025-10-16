@@ -60,10 +60,10 @@ python main.py
 Or using uvicorn directly:
 
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+uvicorn main:app --host 0.0.0.0 --port 8888 --reload
 ```
 
-The API will be available at `http://localhost:8001`
+The API will be available at `http://localhost:8888`
 
 ### 4. Test with CSV Data (Recommended)
 
@@ -92,7 +92,7 @@ Every conversation download is **automatically tracked** with:
 **View current statistics:**
 ```bash
 # API endpoint
-curl http://localhost:8001/statistics
+curl http://localhost:8888/statistics
 
 # Command line
 python3 metadata_tracker.py
@@ -287,8 +287,8 @@ Get comprehensive statistics about downloaded conversations with progress tracki
 
 FastAPI provides automatic interactive documentation:
 
-- **Swagger UI**: `http://localhost:8001/docs`
-- **ReDoc**: `http://localhost:8001/redoc`
+- **Swagger UI**: `http://localhost:8888/docs`
+- **ReDoc**: `http://localhost:8888/redoc`
 
 ## 🎵 Audio Processing
 
@@ -363,7 +363,7 @@ print(response.json())
 For production deployment, use a production-grade ASGI server:
 
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 8001 --workers 4
+uvicorn main:app --host 0.0.0.0 --port 8888 --workers 4
 ```
 
 ## 📈 Use Cases
@@ -465,10 +465,10 @@ python3 analyze_storage.py --target 100
 python3 analyze_storage.py --export-csv
 
 # API statistics
-curl http://localhost:8001/statistics?target_hours=100
+curl http://localhost:8888/statistics?target_hours=100
 
 # API docs
-open http://localhost:8001/docs
+open http://localhost:8888/docs
 ```
 
 ---
