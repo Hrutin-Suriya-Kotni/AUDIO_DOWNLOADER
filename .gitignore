@@ -24,6 +24,7 @@ wheels/
 .installed.cfg
 *.egg
 
+.down_env/
 # Downloaded audio files
 downloaded_audios/
 *.wav

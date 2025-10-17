@@ -77,11 +77,7 @@ python test_single_download.py
 python batch_download_from_csv.py
 ```
 
-See `USAGE_GUIDE.md` for detailed CSV batch download instructions.
-
 ## 📊 Track Your Progress
-
-### Real-Time Metadata Tracking
 
 Every conversation download is **automatically tracked** with:
 - ✅ Conversation ID and timestamp
@@ -96,38 +92,12 @@ curl http://localhost:8888/statistics
 
 # Command line
 python3 metadata_tracker.py
-```
 
-### Progress Monitoring
-
-Track progress toward your collection goal (e.g., 100 hours):
-
-```bash
-# Check progress
+# Check progress toward target
 python3 analyze_storage.py --target 100
-
-# Save report
-python3 analyze_storage.py --target 100 --save
 
 # Export to CSV
 python3 analyze_storage.py --export-csv
-```
-
-**Output:**
-```
-📊 SUMMARY:
-  Total Conversations Downloaded: 13
-  Total Audio Duration:           10.25 hours (615.0 minutes)
-  Total Storage Used:             0.44 GB (453.23 MB)
-
-🎯 PROGRESS TO TARGET:
-  Target Hours:                   100.00 hours
-  Current Hours:                  10.25 hours
-  Remaining Hours:                89.75 hours
-  Progress:                       10.3%
-  [████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 10.3%
-  
-  📥 Estimated conversations needed: 114
 ```
 
 ### Hourly Automated Monitoring
@@ -135,18 +105,10 @@ python3 analyze_storage.py --export-csv
 Set up automatic hourly checks:
 
 ```bash
-# Make executable
 chmod +x hourly_monitor.sh
-
-# Edit target hours
 nano hourly_monitor.sh  # Set TARGET_HOURS=100
-
-# Add to crontab
-crontab -e
-# Add: 0 * * * * /path/to/DOWNLOAD_DIA_AUDIOS/hourly_monitor.sh
+crontab -e  # Add: 0 * * * * /path/to/DOWNLOAD_DIA_AUDIOS/hourly_monitor.sh
 ```
-
-**See `TRACKING_GUIDE.md` for complete documentation!**
 
 ## 📡 API Endpoints
 
@@ -174,7 +136,7 @@ POST /download/single
 
 **Example using curl:**
 ```bash
-curl -X POST "http://localhost:8001/download/single" \
+curl -X POST "http://localhost:8888/download/single" \
   -F "conversation_id=conv_001" \
   -F "audio_url=https://example.com/audio.mp3" \
   -F "speaker_label=agent"
@@ -204,7 +166,7 @@ POST /download/dual
 
 **Example using curl:**
 ```bash
-curl -X POST "http://localhost:8001/download/dual" \
+curl -X POST "http://localhost:8888/download/dual" \
   -F "conversation_id=conv_002" \
   -F "audio_url_agent=https://example.com/agent_audio.mp3" \
   -F "audio_url_customer=https://example.com/customer_audio.mp3"
@@ -317,7 +279,7 @@ Environment variables (optional):
 AUDIO_STORAGE_DIR=./downloaded_audios
 
 # Server port
-PORT=8001
+PORT=8888
 
 # Log directory
 LOG_DIR=./logs
@@ -342,13 +304,13 @@ Output format: WAV (16kHz, mono)
 You can test using:
 
 1. **curl** (see examples above)
-2. **Swagger UI** at `http://localhost:8001/docs`
+2. **Swagger UI** at `http://localhost:8888/docs`
 3. **Python requests:**
 
 ```python
 import requests
 
-url = "http://localhost:8001/download/single"
+url = "http://localhost:8888/download/single"
 data = {
     "conversation_id": "test_001",
     "audio_url": "https://example.com/audio.mp3",
@@ -432,12 +394,6 @@ This service can be integrated with:
 - ML training workflows
 - Audio preprocessing systems
 - Voice analytics platforms
-
-## 📚 Documentation
-
-- **README.md** (this file) - Overview and quick start
-- **USAGE_GUIDE.md** - CSV batch download instructions
-- **TRACKING_GUIDE.md** - Complete tracking & monitoring guide
 
 ## 📞 Support
 

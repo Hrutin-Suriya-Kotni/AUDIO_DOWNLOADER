@@ -8,10 +8,14 @@ from datetime import datetime
 from typing import Optional
 from fastapi import FastAPI, Form, HTTPException
 from fastapi.responses import JSONResponse
+from dotenv import load_dotenv
 
 from audio_downloader import AudioHelper
 from logger import get_logger
 from metadata_tracker import MetadataTracker
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Initialize logger and metadata tracker
 LOGGER = get_logger("AudioDownloader")
@@ -20,6 +24,7 @@ metadata_tracker = MetadataTracker()
 # Configuration
 AUDIO_STORAGE_DIR = os.getenv("AUDIO_STORAGE_DIR", "./downloaded_audios")
 os.makedirs(AUDIO_STORAGE_DIR, exist_ok=True)
+LOGGER.info(f"Audio storage directory: {AUDIO_STORAGE_DIR}")
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -81,9 +86,13 @@ async def download_single_audio(
             LOGGER.error(f"Failed to download audio from URL: {audio_url}")
             raise HTTPException(status_code=400, detail="Failed to download audio from provided URL")
         
-        # Save audio file
+        # Create conversation folder
+        conversation_folder = os.path.join(AUDIO_STORAGE_DIR, conversation_id)
+        os.makedirs(conversation_folder, exist_ok=True)
+        
+        # Save audio file in conversation folder
         filename = f"{conversation_id}_{speaker_label}.wav"
-        filepath = os.path.join(AUDIO_STORAGE_DIR, filename)
+        filepath = os.path.join(conversation_folder, filename)
         
         with open(filepath, 'wb') as f:
             f.write(audio_data.getvalue())
@@ -139,6 +148,11 @@ async def download_dual_audio(
     }
     
     try:
+        # Create conversation folder
+        conversation_folder = os.path.join(AUDIO_STORAGE_DIR, conversation_id)
+        os.makedirs(conversation_folder, exist_ok=True)
+        LOGGER.info(f"Created conversation folder: {conversation_folder}")
+        
         # Download agent audio
         LOGGER.info("Downloading agent audio...")
         audio_data_agent = audio_helper.download_audio(audio_url_agent)
@@ -146,9 +160,9 @@ async def download_dual_audio(
             LOGGER.error(f"Failed to download agent audio from URL: {audio_url_agent}")
             raise HTTPException(status_code=400, detail="Failed to download agent audio")
         
-        # Save agent audio
+        # Save agent audio in conversation folder
         filename_agent = f"{conversation_id}_agent.wav"
-        filepath_agent = os.path.join(AUDIO_STORAGE_DIR, filename_agent)
+        filepath_agent = os.path.join(conversation_folder, filename_agent)
         
         with open(filepath_agent, 'wb') as f:
             f.write(audio_data_agent.getvalue())
@@ -176,9 +190,9 @@ async def download_dual_audio(
                     "error": "Failed to download audio"
                 })
             else:
-                # Save customer audio
+                # Save customer audio in conversation folder
                 filename_customer = f"{conversation_id}_customer.wav"
-                filepath_customer = os.path.join(AUDIO_STORAGE_DIR, filename_customer)
+                filepath_customer = os.path.join(conversation_folder, filename_customer)
                 
                 with open(filepath_customer, 'wb') as f:
                     f.write(audio_data_customer.getvalue())
@@ -234,17 +248,28 @@ async def download_dual_audio(
 def storage_info():
     """Get information about stored audio files"""
     try:
-        files = [f for f in os.listdir(AUDIO_STORAGE_DIR) if f.endswith('.wav')]
-        total_size_mb = sum(
-            os.path.getsize(os.path.join(AUDIO_STORAGE_DIR, f)) 
-            for f in files
-        ) / (1024 * 1024)
+        # Count conversation folders and files
+        conversation_folders = [d for d in os.listdir(AUDIO_STORAGE_DIR) 
+                               if os.path.isdir(os.path.join(AUDIO_STORAGE_DIR, d))]
+        
+        total_files = 0
+        total_size_bytes = 0
+        
+        for folder in conversation_folders:
+            folder_path = os.path.join(AUDIO_STORAGE_DIR, folder)
+            for file in os.listdir(folder_path):
+                if file.endswith('.wav'):
+                    total_files += 1
+                    total_size_bytes += os.path.getsize(os.path.join(folder_path, file))
+        
+        total_size_mb = total_size_bytes / (1024 * 1024)
         
         return {
             "storage_directory": AUDIO_STORAGE_DIR,
-            "total_files": len(files),
+            "total_conversations": len(conversation_folders),
+            "total_files": total_files,
             "total_size_mb": round(total_size_mb, 2),
-            "files": files[:50]  # Return first 50 files
+            "conversation_folders": conversation_folders[:50]  # Return first 50 folders
         }
     except Exception as e:
         LOGGER.error(f"Error getting storage info: {str(e)}")
