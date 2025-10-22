@@ -148,8 +148,24 @@ async def download_dual_audio(
     }
     
     try:
-        # Create conversation folder
+        # Check if conversation already exists
         conversation_folder = os.path.join(AUDIO_STORAGE_DIR, conversation_id)
+        already_exists = os.path.exists(conversation_folder)
+        
+        if already_exists:
+            LOGGER.warning(f"Conversation {conversation_id} already exists - SKIPPING to prevent overwrite")
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "conversation_id": conversation_id,
+                    "status": "skipped",
+                    "message": "Conversation already exists on server",
+                    "reason": "duplicate_conversation_id",
+                    "action": "Use a different conversation_id to upload new files"
+                }
+            )
+        
+        # Create conversation folder
         os.makedirs(conversation_folder, exist_ok=True)
         LOGGER.info(f"Created conversation folder: {conversation_folder}")
         
