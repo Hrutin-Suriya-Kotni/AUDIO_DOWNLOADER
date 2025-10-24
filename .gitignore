@@ -43,6 +43,10 @@ conversations_metadata.json
 conversations_metadata.csv
 storage_report_*.json
 
+# Hourly analytics
+hourly_analytics/
+hourly_analytics.log
+
 # Environment variables
 .env
 

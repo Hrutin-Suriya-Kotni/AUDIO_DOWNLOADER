@@ -2,8 +2,6 @@
 """
 Direct Folder Analyzer - Analyze audio files directly from disk
 Scans the actual storage folder and calculates statistics from audio files
-
-No dependency on metadata JSON - reads directly from filesystem!
 """
 
 import os
@@ -40,7 +38,17 @@ class DirectFolderAnalyzer:
         
         if not conversation_folders:
             print("⚠️  No conversation folders found!")
-            return
+            return {
+                'total_conversations': 0,
+                'total_files': 0,
+                'total_hours': 0,
+                'total_minutes': 0,
+                'total_size_gb': 0,
+                'total_size_mb': 0,
+                'average_duration_min': 0,
+                'average_size_mb': 0,
+                'incomplete_conversations': 0
+            }
         
         print(f"Found {len(conversation_folders)} conversation folders")
         print(f"Analyzing audio files...\n")
@@ -77,23 +85,27 @@ class DirectFolderAnalyzer:
                 file_size = os.path.getsize(file_path)
                 conv_size += file_size
                 
-                # Get duration
+                # Get duration with robust error handling
                 try:
+                    if file_size == 0:
+                        continue
+                    
                     audio = AudioSegment.from_wav(file_path)
                     duration_sec = len(audio) / 1000.0
                     
-                    # Use max duration (both should be same for dual channel)
+                    if duration_sec <= 0:
+                        continue
+                    
                     if duration_sec > conv_duration:
                         conv_duration = duration_sec
                     
-                    # Identify agent/customer
                     if 'agent' in audio_file.lower():
                         agent_file = True
                     elif 'customer' in audio_file.lower():
                         customer_file = True
                         
                 except Exception as e:
-                    print(f"    ⚠️  Error reading {audio_file}: {e}")
+                    pass  # Skip files with errors
             
             # Update totals
             total_conversations += 1
@@ -111,8 +123,8 @@ class DirectFolderAnalyzer:
                 'has_customer': customer_file is not None
             })
             
-            # Show progress every 10 conversations
-            if idx % 10 == 0:
+            # Show progress every 50 conversations
+            if idx % 50 == 0:
                 print(f"  Processed {idx}/{len(conversation_folders)} conversations...")
         
         # Calculate final statistics
@@ -136,7 +148,6 @@ class DirectFolderAnalyzer:
         print(f"\n⏱️  DURATION:")
         print(f"  Total Hours:                    {total_duration_hours:.2f} hours")
         print(f"  Total Minutes:                  {total_duration_min:.2f} minutes")
-        print(f"  Total Seconds:                  {total_duration_seconds:.2f} seconds")
         print(f"  Average per Conversation:       {avg_duration_min:.2f} minutes")
         
         print(f"\n💾 STORAGE:")
@@ -144,19 +155,10 @@ class DirectFolderAnalyzer:
         print(f"  Total Size:                     {total_size_mb:.2f} MB")
         print(f"  Average per Conversation:       {avg_size_mb:.2f} MB")
         
-        # Check for incomplete conversations (missing agent or customer)
+        # Check for incomplete conversations
         incomplete = [c for c in conversations_data if not (c['has_agent'] and c['has_customer'])]
         if incomplete:
             print(f"\n⚠️  INCOMPLETE CONVERSATIONS: {len(incomplete)}")
-            for conv in incomplete[:5]:
-                status = []
-                if not conv['has_agent']:
-                    status.append('missing agent')
-                if not conv['has_customer']:
-                    status.append('missing customer')
-                print(f"    - {conv['folder'][:50]}: {', '.join(status)}")
-            if len(incomplete) > 5:
-                print(f"    ... and {len(incomplete) - 5} more")
         
         print(f"\n{'='*70}\n")
         
@@ -171,89 +173,50 @@ class DirectFolderAnalyzer:
             'average_size_mb': round(avg_size_mb, 2),
             'incomplete_conversations': len(incomplete)
         }
-    
-    def analyze_with_target(self, target_hours: float):
-        """Analyze and show progress toward target"""
-        stats = self.analyze()
-        
-        current_hours = stats['total_hours']
-        remaining_hours = target_hours - current_hours
-        progress_pct = (current_hours / target_hours * 100) if target_hours > 0 else 0
-        
-        # Estimate conversations needed
-        avg_hours_per_conv = current_hours / stats['total_conversations'] if stats['total_conversations'] > 0 else 0
-        estimated_needed = int(remaining_hours / avg_hours_per_conv) if avg_hours_per_conv > 0 else 0
-        
-        print(f"🎯 PROGRESS TO TARGET:")
-        print(f"  Target Hours:                   {target_hours:.2f} hours")
-        print(f"  Current Hours:                  {current_hours:.2f} hours")
-        print(f"  Remaining Hours:                {remaining_hours:.2f} hours")
-        print(f"  Progress:                       {progress_pct:.1f}%")
-        
-        # Progress bar
-        bar_length = 40
-        filled = int(bar_length * progress_pct / 100)
-        bar = "█" * filled + "░" * (bar_length - filled)
-        print(f"  [{bar}] {progress_pct:.1f}%")
-        
-        if current_hours >= target_hours:
-            print(f"\n  ✅ TARGET REACHED! You have {current_hours:.2f} hours!")
-            print(f"     You can stop downloading now.")
-        else:
-            print(f"\n  📥 Estimated conversations needed: ~{estimated_needed}")
-            print(f"     Keep downloading to reach {target_hours} hours target")
-        
-        print(f"\n{'='*70}\n")
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description='Analyze audio storage folder directly from disk',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog='''
-Examples:
-  # Analyze default location
-  python3 direct_folder_analyzer.py
-  
-  # Analyze custom location
-  python3 direct_folder_analyzer.py --path /path/to/downloaded_audios
-  
-  # With target hours
-  python3 direct_folder_analyzer.py --target 100
-  
-  # Custom path with target
-  python3 direct_folder_analyzer.py --path /media/vocab/.../downloaded_audios --target 100
-        '''
-    )
+    parser = argparse.ArgumentParser(description='Analyze audio storage folder directly')
     
     parser.add_argument(
         '--path',
         default='/media/vocab/e7c26124-50af-4761-94a7-61983de87073/Hrutin/downloaded_audios',
-        help='Path to downloaded_audios folder (default: server path)'
+        help='Path to downloaded_audios folder'
     )
     parser.add_argument(
         '--target',
         type=float,
-        help='Target hours of audio to collect'
+        help='Target hours (shows progress)'
     )
     
     args = parser.parse_args()
     
     try:
         analyzer = DirectFolderAnalyzer(args.path)
+        stats = analyzer.analyze()
         
-        if args.target:
-            analyzer.analyze_with_target(args.target)
-        else:
-            analyzer.analyze()
+        if args.target and stats:
+            current_hours = stats['total_hours']
+            remaining = args.target - current_hours
+            progress_pct = (current_hours / args.target * 100) if args.target > 0 else 0
+            
+            print(f"🎯 PROGRESS TO TARGET:")
+            print(f"  Target: {args.target:.2f} hours")
+            print(f"  Current: {current_hours:.2f} hours")
+            print(f"  Remaining: {remaining:.2f} hours")
+            print(f"  Progress: {progress_pct:.1f}%")
+            
+            bar_length = 40
+            filled = int(bar_length * progress_pct / 100)
+            bar = "█" * filled + "░" * (bar_length - filled)
+            print(f"  [{bar}] {progress_pct:.1f}%")
+            
+            if current_hours >= args.target:
+                print(f"\n  ✅ TARGET REACHED!")
+            print(f"\n{'='*70}\n")
         
-    except FileNotFoundError as e:
-        print(f"\n❌ Error: {str(e)}\n")
-        sys.exit(1)
     except Exception as e:
-        print(f"\n❌ Unexpected error: {str(e)}\n")
-        import traceback
-        traceback.print_exc()
+        print(f"\n❌ Error: {e}\n")
         sys.exit(1)
 
 
