@@ -23,8 +23,10 @@ metadata_tracker = MetadataTracker()
 
 # Configuration
 AUDIO_STORAGE_DIR = os.getenv("AUDIO_STORAGE_DIR", "./downloaded_audios")
+ENABLE_DOWNLOADS = os.getenv("ENABLE_DOWNLOADS", "true").lower() in ["true", "1", "yes"]
 os.makedirs(AUDIO_STORAGE_DIR, exist_ok=True)
 LOGGER.info(f"Audio storage directory: {AUDIO_STORAGE_DIR}")
+LOGGER.info(f"Downloads enabled: {ENABLE_DOWNLOADS}")
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -148,6 +150,19 @@ async def download_dual_audio(
     }
     
     try:
+        # Check if downloads are enabled
+        if not ENABLE_DOWNLOADS:
+            LOGGER.info(f"DRY RUN MODE: Would process conversation_id: {conversation_id}")
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "conversation_id": conversation_id,
+                    "status": "dry_run",
+                    "message": "Downloads disabled - API in test mode",
+                    "note": "Set ENABLE_DOWNLOADS=true in .env to enable actual downloads"
+                }
+            )
+        
         # Check if conversation already exists
         conversation_folder = os.path.join(AUDIO_STORAGE_DIR, conversation_id)
         already_exists = os.path.exists(conversation_folder)
